@@ -2,8 +2,8 @@
 
 __description__ = 'Extract base64 strings from file'
 __author__ = 'Didier Stevens'
-__version__ = '0.0.20'
-__date__ = '2021/12/28'
+__version__ = '0.0.23'
+__date__ = '2022/07/17'
 
 """
 
@@ -38,6 +38,10 @@ History:
   2021/11/14: 0.0.18 fixed DecodeDataDecimal
   2021/12/15: 0.0.19 Python 3 bugfix
   2021/12/28: 0.0.20 added zxcn decoding
+  2022/05/11: 0.0.21 added nbl decoding
+  2022/06/17: 0.0.22 added statistics for encodings
+  2022/07/15: 0.0.23 added option --jsoninput & --postprocess
+  2022/07/17: continue
 
 Todo:
   add base64 url
@@ -117,6 +121,7 @@ zxc stands for "zero hexadecimal comma" (0x), it looks like this: 0x90,0x90,0x90
 zxcn stands for "zero hexadecimal comma no-leading-zero" (0x), it looks like this: 0x90,0xA,0x2A,0x90...
 dec stands for "decimal", it looks like this: 80;75;3;4...
 nb stands for "NETBIOS", it looks like this: ENFKOIAA
+nbl stands for "NETBIOS lowercase", it looks like this: enfkoiaa
 b85 stands for BASE85 RFC 1924, it looks like this: X>D+Ca&#bLba`-Pb31o...
 a85 stands for ASCII85, it looks like this: BOu!rD]...
 
@@ -160,22 +165,37 @@ It's also possible to try all encodings: all
 Example:
 base64dump.py -e all -n 80 sample.vir
 
-Enc  Size    Encoded          Decoded          MD5 decoded
----  ----    -------          -------          -----------
-b64:     176 bebafeca41414141 m.+}t.p^5p^5p^5p e3bed37dcd137c9bb5da103d3c45be49
-hex:     176 bebafeca41414141 +..-AAAAAAAAAAAA 56464bd2b2c42bbf2edda87d54ab91f5
-b64:     192 28000e1358000e13 .-4-fwt-4-fwm.+} 81c587874b1c3ddc5479a283179d29f7
-hex:     192 28000e1358000e13 (...X...+..-AAAA 3a604ca304d1dbbcc1734a430cf6dc82
-b64:    2144 6064a1000000008b dN+k]4+M4+O.pM8. 46d100d435a37f89f3ab0ac6db3e9cac
-hex:    2144 6064a1000000008b .d......@.%....f a2ae7b55955262ada177862ceb683977
-b64:    3640 48895C2408488974 p-=S-+++<=....tp f0384b0c74e9402ab3f1aacc4a270ed3
-hex:    3640 48895C2408488974 H.\$.H.t$.H.|$.U 3320b9e508862886d2c3f556cacc67ec
-b64:  213024 5555555566666666 tPytPyd..d....Z. c7ff5e1a5a01698f99f67fd3f0d20d6d
-hex:  213024 5555555566666666 UUUUffffMZ...... 7a618dc1ef3f52693b8ec22dbe0300ec
-b64:  246816 5555555566666666 tPytPyd..d....Z. bdec177dc760d4296aefbbdc4c47bcf2
-hex:  246816 5555555566666666 UUUUffffMZ...... a69fa966087f38241544523d437f9a8b
+Enc  Size    Chars Encoded          Decoded          md5 decoded
+---  ----    ----- -------          -------          -----------
+b64:     176    11 bebafeca41414141 m..}...^5.^5.^5. e3bed37dcd137c9bb5da103d3c45be49
+hex:     176    11 bebafeca41414141 ....AAAAAAAAAAAA 56464bd2b2c42bbf2edda87d54ab91f5
+a85:     178    13 <bebafeca4141414 Vj...4V.2| .;... 9385715088c31ac9a8b4fa06166ccb97
+b85:     178    13 <bebafeca4141414 ......Q..B...{.. 1b14eef572cc16916b30e32c490f2cc9
+b64:     192    13 28000e1358000e13 ..4..w..4..wm..} 81c587874b1c3ddc5479a283179d29f7
+hex:     192    13 28000e1358000e13 (...X.......AAAA 3a604ca304d1dbbcc1734a430cf6dc82
+a85:     194    15 <28000e1358000e1 T...1*..H.(`2x9. b714fd16ad0d77d5e5391d9197ad1b9f
+b85:     194    15 <28000e1358000e1 .5v..v.E..%..<." d3c57839bf4900e64ea17f035382bb52
+b64:    2144    16 6064a1000000008b .N.k]4.M4.O..M8. 46d100d435a37f89f3ab0ac6db3e9cac
+hex:    2144    16 6064a1000000008b `d......@.%....f a2ae7b55955262ada177862ceb683977
+a85:    2146    18 <6064a1000000008 T.v....q/:..I.#Y 76f1028223f9196c18ea2a0f64f304ef
+b85:    2146    18 <6064a1000000008 .Z..p........?N. a890225330f60c170e2c588fa6e82f90
+b64:    3640    16 48895C2408488974 ..=.-...<.....t. f0384b0c74e9402ab3f1aacc4a270ed3
+hex:    3640    16 48895C2408488974 H.\$.H.t$.H.|$.U 3320b9e508862886d2c3f556cacc67ec
+a85:    3642    18 <48895C240848897 T...?z.uHD.XE'X. 053a28dd24051ea7b2131a95c34b99ee
+b85:    3642    18 <48895C240848897 .H6...DW......VR 5f57fa2b2288577e7844e28d6e9548ca
+b64:  213024    22 5555555566666666 ..y..y........Z. c7ff5e1a5a01698f99f67fd3f0d20d6d
+hex:  213024    22 5555555566666666 UUUUffffMZ...... 7a618dc1ef3f52693b8ec22dbe0300ec
+a85:  213026    24 <555555556666666 T..[>...B...B... 5784f2d34e1881202f88a39dc2d64ffe
+b85:  213026    24 <555555556666666 .Q?............. d227c899ea11f605aa1b78700cbc5f71
+b64:  246816    22 5555555566666666 ..y..y........Z. bdec177dc760d4296aefbbdc4c47bcf2
+hex:  246816    22 5555555566666666 UUUUffffMZ...... a69fa966087f38241544523d437f9a8b
+a85:  246818    24 <555555556666666 T..[>...B...B... 1b925074b51c31454e68f50db73ea4a7
+b85:  246818    24 <555555556666666 .Q?............. 80d002c19cc64ff2ab61c0cde01e6ddf
 
 The list is sorted by increasing size.
+
+Column Chars contains the number of unique characters found in the encoding.
+The reason that sometimes 22 unique characters are found for the hex encoding in this example, and not 16 at most, is that this sample both uses lowercase and uppercase letters for hexadecimal.
 
 Identical decoded content can be made unique with option -u.
 
@@ -244,9 +264,16 @@ C:\Demo>base64dump.py -p "lambda x: x[:-1]" malformed_base64.vir
 
 In this example, the lambda expression will remove one character from the end of the detected string.
 
+Option -P (postprocess) works just like option -p, but on the decoded data.
+If an error occurs in the postprocess function, the error AND the encoded data will be ignored.
+Built-in function UTF16_ASCII can be used to transform UTF16 to ASCII, and raise an error when the transformed string is not ASCII. This decoded data is then ignored.
+This built-in function UTF16_ASCII allows us to search for encoded PowerShell commands that are pure ASCII,.
+
 With option -T (--headtail), output can be truncated to the first 10 lines and last 10 lines of output.
 
 With option --jsonoutput base64dump.py will output selected content as a JSON object that can be piped into other tools that support this JSON format.
+
+With option --jsoninput base64dump.py will consume JSON output (produced by oledump.py, for example) and scan all items in the JSON input.
 
 Option -c (--cut) allows for the partial selection of a datastream. Use this option to "cut out" part of the datastream.
 The --cut option takes an argument to specify which section of bytes to select from the datastream. This argument is composed of 2 terms separated by a colon (:), like this:
@@ -746,39 +773,62 @@ def HeadTail(data, apply):
 def Translate(expression):
     return lambda x: x.decode(expression)
 
-def DecodeDataBase64(data, ProcessFunction):
-    for base64string in re.findall(b'[ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/]+={0,2}', data):
-        base64string = ProcessFunction(base64string)
-        if len(base64string) % 4 == 0:
+def UTF16_ASCII(data):
+    string = data.decode('utf16').encode()
+    for byte in string:
+        if byte > 127:
+            raise Exception('UTF16_ASCII')
+    return string
+
+def DecodeDataBase64(items, PreProcessFunction, PostProcessFunction):
+    for item in items:
+        data = item['content']
+        for base64string in re.findall(b'[ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/]+={0,2}', data):
+            base64string = PreProcessFunction(base64string)
+            if len(base64string) % 4 == 0:
+                try:
+                    decoded = binascii.a2b_base64(base64string)
+                    decoded = PostProcessFunction(decoded)
+                    yield (item, base64string, decoded)
+                except:
+                    continue
+
+def DecodeDataBase85RFC1924(items, PreProcessFunction, PostProcessFunction):
+    for item in items:
+        data = item['content']
+        for base85string in re.findall(b'[ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!#$%&()*+\-;<=>?@^_`{|}~]+', data):
+            base85string = PreProcessFunction(base85string)
             try:
-                yield (base64string, binascii.a2b_base64(base64string))
+                decoded = base64.b85decode(base85string)
+                decoded = PostProcessFunction(decoded)
+                yield (item, base85string, decoded)
             except:
                 continue
 
-def DecodeDataBase85RFC1924(data, ProcessFunction):
-    for base85string in re.findall(b'[ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!#$%&()*+\-;<=>?@^_`{|}~]+', data):
-        base85string = ProcessFunction(base85string)
-        try:
-            yield (base85string, base64.b85decode(base85string))
-        except:
-            continue
-
-def DecodeDataAscii85(data, ProcessFunction):
-    for ascii85string in re.findall(b'''[!"#$%&'()*+,./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuz-]+''', data):
-        ascii85string = ProcessFunction(ascii85string)
-        try:
-            yield (ascii85string, base64.a85decode(ascii85string))
-        except:
-            continue
-
-def DecodeDataHex(data, ProcessFunction):
-    for hexstring in re.findall(b'[ABCDEFabcdef0123456789]+', data):
-        hexstring = ProcessFunction(hexstring)
-        if len(hexstring) % 2 == 0:
+def DecodeDataAscii85(items, PreProcessFunction, PostProcessFunction):
+    for item in items:
+        data = item['content']
+        for ascii85string in re.findall(b'''[!"#$%&'()*+,./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuz-]+''', data):
+            ascii85string = PreProcessFunction(ascii85string)
             try:
-                yield (hexstring, binascii.a2b_hex(hexstring))
+                decoded = base64.a85decode(ascii85string)
+                decoded = PostProcessFunction(decoded)
+                yield (item, ascii85string, decoded)
             except:
                 continue
+
+def DecodeDataHex(items, PreProcessFunction, PostProcessFunction):
+    for item in items:
+        data = item['content']
+        for hexstring in re.findall(b'[ABCDEFabcdef0123456789]+', data):
+            hexstring = PreProcessFunction(hexstring)
+            if len(hexstring) % 2 == 0:
+                try:
+                    decoded = binascii.a2b_hex(hexstring)
+                    decoded = PostProcessFunction(decoded)
+                    yield (item, hexstring, decoded)
+                except:
+                    continue
 
 def DecodeBU(data):
     decoded = b''
@@ -787,13 +837,29 @@ def DecodeBU(data):
         data = data[6:]
     return decoded
 
-def DecodeDataBU(data, ProcessFunction):
-    for bu in re.findall(br'(?:\\u[ABCDEFabcdef0123456789]{4})+', data):
-        yield (bu, DecodeBU(bu))
+def DecodeDataBU(items, PreProcessFunction, PostProcessFunction):
+    for item in items:
+        data = item['content']
+        for bu in re.findall(br'(?:\\u[ABCDEFabcdef0123456789]{4})+', data):
+            bu = PreProcessFunction(bu)
+            try:
+                decoded = DecodeBU(bu)
+                decoded = PostProcessFunction(decoded)
+                yield (item, bu, decoded)
+            except:
+                continue
 
-def DecodeDataPU(data, ProcessFunction):
-    for bu in re.findall(br'(?:%u[ABCDEFabcdef0123456789]{4})+', data):
-        yield (bu, DecodeBU(bu))
+def DecodeDataPU(items, PreProcessFunction, PostProcessFunction):
+    for item in items:
+        data = item['content']
+        for bu in re.findall(br'(?:%u[ABCDEFabcdef0123456789]{4})+', data):
+            bu = PreProcessFunction(bu)
+            try:
+                decoded = DecodeBU(bu)
+                decoded = PostProcessFunction(decoded)
+                yield (item, bu, decoded)
+            except:
+                continue
 
 def DecodeBX(data):
     decoded = b''
@@ -802,13 +868,29 @@ def DecodeBX(data):
         data = data[4:]
     return decoded
 
-def DecodeDataBX(data, ProcessFunction):
-    for bx in re.findall(br'(?:\\x[ABCDEFabcdef0123456789]{2})+', data):
-        yield (bx, DecodeBX(bx))
+def DecodeDataBX(items, PreProcessFunction, PostProcessFunction):
+    for item in items:
+        data = item['content']
+        for bx in re.findall(br'(?:\\x[ABCDEFabcdef0123456789]{2})+', data):
+            bx = PreProcessFunction(bx)
+            try:
+                decoded = DecodeBX(bx)
+                decoded = PostProcessFunction(decoded)
+                yield (item, bx, decoded)
+            except:
+                continue
 
-def DecodeDataAH(data, ProcessFunction):
-    for ah in re.findall(br'(?:&H[ABCDEFabcdef0123456789]{2})+', data):
-        yield (ah, DecodeBX(ah))
+def DecodeDataAH(items, PreProcessFunction, PostProcessFunction):
+    for item in items:
+        data = item['content']
+        for ah in re.findall(br'(?:&H[ABCDEFabcdef0123456789]{2})+', data):
+            ah = PreProcessFunction(ah)
+            try:
+                decoded = DecodeBX(ah)
+                decoded = PostProcessFunction(decoded)
+                yield (item, ah, decoded)
+            except:
+                continue
 
 def ReverseCount(data, count):
     result = b''
@@ -828,9 +910,17 @@ def DecodeZXLittleEndian(data):
         decoded += binascii.a2b_hex(ReverseCount(hex, 2))
     return decoded
 
-def DecodeDataZXLittleEndian(data, ProcessFunction):
-    for zx in re.findall(br'(?:0x[ABCDEFabcdef0123456789]{1,8})+', data):
-        yield (zx, DecodeZXLittleEndian(zx))
+def DecodeDataZXLittleEndian(items, PreProcessFunction, PostProcessFunction):
+    for item in items:
+        data = item['content']
+        for zx in re.findall(br'(?:0x[ABCDEFabcdef0123456789]{1,8})+', data):
+            zx = PreProcessFunction(zx)
+            try:
+                decoded = DecodeZXLittleEndian(zx)
+                decoded = PostProcessFunction(decoded)
+                yield (item, zx, decoded)
+            except:
+                continue
 
 def DecodeZXBigEndian(data):
     decoded = b''
@@ -842,46 +932,95 @@ def DecodeZXBigEndian(data):
         decoded += binascii.a2b_hex(hex)
     return decoded
 
-def DecodeDataZXBigEndian(data, ProcessFunction):
-    for zx in re.findall(br'(?:0x[ABCDEFabcdef0123456789]{1,8})+', data):
-        yield (zx, DecodeZXBigEndian(zx))
+def DecodeDataZXBigEndian(items, PreProcessFunction, PostProcessFunction):
+    for item in items:
+        data = item['content']
+        for zx in re.findall(br'(?:0x[ABCDEFabcdef0123456789]{1,8})+', data):
+            zx = PreProcessFunction(zx)
+            try:
+                decoded = DecodeZXBigEndian(zx)
+                decoded = PostProcessFunction(decoded)
+                yield (item, zx, decoded)
+            except:
+                continue
 
-def RemoveWhitespace(data):
+def RemoveWhitespaceSub(data):
     for whitespacecharacter in string.whitespace:
         data = data.replace(whitespacecharacter.encode(), b'')
     return data
 
-def DecodeDataZXC(data, ProcessFunction):
-    data = RemoveWhitespace(data)
-    for hexstring in re.findall(br'(?:0x[ABCDEFabcdef0123456789]{2},)+0x[ABCDEFabcdef0123456789]{2}', data):
-        try:
-            yield (hexstring, binascii.a2b_hex(hexstring.replace(b'0x', b'').replace(b',', b'')))
-        except:
-            continue
+def RemoveWhitespace(items):
+    for item in items:
+        item['content'] = RemoveWhitespaceSub(item['content'])
+    return items
 
-def DecodeDataZXCN(data, ProcessFunction):
-    data = RemoveWhitespace(data)
-    for hexstring in re.findall(br'(?:0x[ABCDEFabcdef0123456789]{1,2},)+0x[ABCDEFabcdef0123456789]{1,2}', data):
-        try:
-            yield (hexstring, b''.join([binascii.a2b_hex(IFF(len(hexbyte) == 1, b'0' + hexbyte, hexbyte)) for hexbyte in hexstring.replace(b'0x', b'').split(b',')]))
-        except:
-            continue
+def DataReplace(items, search, replace):
+    for item in items:
+        item['content'] = item['content'].replace(search, replace)
+    return items
 
-def DecodeDataDecimal(data, ProcessFunction):
-    #find decimal numbers separated by a single character that is not a digit
-    for decimals in re.findall(br'(?:[0123456789]{1,3}[^0123456789])+[0123456789]{1,3}', data):
-        dBytes = {}
-        for byte in decimals:
-            if byte < 0x30 or byte > 0x39:
-                dBytes[byte] = dBytes.get(byte, 0) + 1
-        if len(dBytes) > 0:
-            # take the most frequent non-digit character as separator
-            separator = bytes([sorted(dBytes.items(), key=operator.itemgetter(1), reverse=True)[0][0]])
-            for decimalstring in re.findall((br'(?:[0123456789]{1,3}\x%02x' % separator[0]) + br')+[0123456789]{1,3}', decimals):
-                try:
-                    yield (decimalstring, bytes([int(decimal) for decimal in decimalstring.split(separator)]))
-                except:
-                    continue
+def IgnoreLeadingNULLBytesSub(data):
+    previous_char_was_zero = False
+    result = b''
+    for char in data:
+        if char == 0:
+            if previous_char_was_zero:
+                result += bytes([char])
+            previous_char_was_zero = True
+        else:
+            result += bytes([char])
+            previous_char_was_zero = False
+    return result
+
+def IgnoreLeadingNULLBytes(items):
+    for item in items:
+        item['content'] = IgnoreLeadingNULLBytesSub(item['content'])
+    return items
+
+def DecodeDataZXC(items, PreProcessFunction, PostProcessFunction):
+    for item in items:
+        data = RemoveWhitespaceSub(item['content'])
+        for hexstring in re.findall(br'(?:0x[ABCDEFabcdef0123456789]{2},)+0x[ABCDEFabcdef0123456789]{2}', data):
+            hexstring = PreProcessFunction(hexstring)
+            try:
+                decoded = binascii.a2b_hex(hexstring.replace(b'0x', b'').replace(b',', b''))
+                decoded = PostProcessFunction(decoded)
+                yield (item, hexstring, decoded)
+            except:
+                continue
+
+def DecodeDataZXCN(items, PreProcessFunction, PostProcessFunction):
+    for item in items:
+        data = RemoveWhitespaceSub(item['content'])
+        for hexstring in re.findall(br'(?:0x[ABCDEFabcdef0123456789]{1,2},)+0x[ABCDEFabcdef0123456789]{1,2}', data):
+            hexstring = PreProcessFunction(hexstring)
+            try:
+                decoded = b''.join([binascii.a2b_hex(IFF(len(hexbyte) == 1, b'0' + hexbyte, hexbyte)) for hexbyte in hexstring.replace(b'0x', b'').split(b',')])
+                decoded = PostProcessFunction(decoded)
+                yield (item, hexstring, decoded)
+            except:
+                continue
+
+def DecodeDataDecimal(items, PreProcessFunction, PostProcessFunction):
+    for item in items:
+        data = item['content']
+        #find decimal numbers separated by a single character that is not a digit
+        for decimals in re.findall(br'(?:[0123456789]{1,3}[^0123456789])+[0123456789]{1,3}', data):
+            decimals = PreProcessFunction(decimals)
+            dBytes = {}
+            for byte in decimals:
+                if byte < 0x30 or byte > 0x39:
+                    dBytes[byte] = dBytes.get(byte, 0) + 1
+            if len(dBytes) > 0:
+                # take the most frequent non-digit character as separator
+                separator = bytes([sorted(dBytes.items(), key=operator.itemgetter(1), reverse=True)[0][0]])
+                for decimalstring in re.findall((br'(?:[0123456789]{1,3}\x%02x' % separator[0]) + br')+[0123456789]{1,3}', decimals):
+                    try:
+                        decoded = bytes([int(decimal) for decimal in decimalstring.split(separator)])
+                        decoded = PostProcessFunction(decoded)
+                        yield (item, decimalstring, decoded)
+                    except:
+                        continue
 
 def NETBIOSDecode(netbios):
     dTranslate = {
@@ -904,15 +1043,33 @@ def NETBIOSDecode(netbios):
     }
     return binascii.a2b_hex(bytes([dTranslate[char] for char in netbios]))
 
-def DecodeDataNETBIOS(data, ProcessFunction):
-    #find A - P sequence of letters
-    for netbiosstring in re.findall(b'[ABCDEFGHIJKLMNOP]+', data):
-        netbiosstring = ProcessFunction(netbiosstring)
-        if len(netbiosstring) % 2 == 0:
-            try:
-                yield (netbiosstring, NETBIOSDecode(netbiosstring))
-            except:
-                continue
+def DecodeDataNETBIOS(items, PreProcessFunction, PostProcessFunction):
+    for item in items:
+        data = item['content']
+        #find A - P sequence of letters
+        for netbiosstring in re.findall(b'[ABCDEFGHIJKLMNOP]+', data):
+            netbiosstring = PreProcessFunction(netbiosstring)
+            if len(netbiosstring) % 2 == 0:
+                try:
+                    decoded = NETBIOSDecode(netbiosstring)
+                    decoded = PostProcessFunction(decoded)
+                    yield (item, netbiosstring, decoded)
+                except:
+                    continue
+
+def DecodeDataNETBIOSLowercase(items, PreProcessFunction, PostProcessFunction):
+    for item in items:
+        data = item['content']
+        #find a - p sequence of letters
+        for netbiosstring in re.findall(b'[abcdefghijklmnop]+', data):
+            netbiosstring = PreProcessFunction(netbiosstring)
+            if len(netbiosstring) % 2 == 0:
+                try:
+                    decoded = NETBIOSDecode(netbiosstring.upper())
+                    decoded = PostProcessFunction(decoded)
+                    yield (item, netbiosstring, decoded)
+                except:
+                    continue
 
 def YARACompile(ruledata):
     if ruledata.startswith('#'):
@@ -1017,6 +1174,65 @@ def AvailableEncodings():
         result.append(' %s -> %s' % (key, value[0]))
     return result
 
+def CheckJSON(stringJSON):
+    try:
+        object = json.loads(stringJSON)
+    except:
+        print('Error parsing JSON')
+        print(sys.exc_info()[1])
+        return None
+    if not isinstance(object, dict):
+        print('Error JSON is not a dictionary')
+        return None
+    if not 'version' in object:
+        print('Error JSON dictionary has no version')
+        return None
+    if object['version'] != 2:
+        print('Error JSON dictionary has wrong version')
+        return None
+    if not 'id' in object:
+        print('Error JSON dictionary has no id')
+        return None
+    if object['id'] != 'didierstevens.com':
+        print('Error JSON dictionary has wrong id')
+        return None
+    if not 'type' in object:
+        print('Error JSON dictionary has no type')
+        return None
+    if object['type'] != 'content':
+        print('Error JSON dictionary has wrong type')
+        return None
+    if not 'fields' in object:
+        print('Error JSON dictionary has no fields')
+        return None
+    if not 'name' in object['fields']:
+        print('Error JSON dictionary has no name field')
+        return None
+    if not 'content' in object['fields']:
+        print('Error JSON dictionary has no content field')
+        return None
+    if not 'items' in object:
+        print('Error JSON dictionary has no items')
+        return None
+    for item in object['items']:
+        item['content'] = binascii.a2b_base64(item['content'])
+    return object['items']
+
+def PrefixIfNeeded(string, prefix=' '):
+    if string == '':
+        return string
+    else:
+        return prefix + string
+
+def ProduceJSONName(item):
+    name = item['name']
+    if name == None:
+        return ''
+    elif isinstance(name, str):
+        return name
+    else:
+        return repr(name)
+
 def BASE64Dump(filename, options):
     global decoders
     global dEncodings
@@ -1036,20 +1252,26 @@ def BASE64Dump(filename, options):
     decoders = []
     LoadDecoders(options.decoders, options.decoderdir, True)
 
-    if filename == '':
-        IfWIN32SetBinary(sys.stdin)
-        if sys.version_info[0] >= 3:
-            oDataIO = DataIO(sys.stdin.buffer.read())
-        else:
-            oDataIO = DataIO(sys.stdin.read())
-    elif filename.lower().endswith('.zip'):
-        oZipfile = zipfile.ZipFile(filename, 'r')
-        oZipContent = oZipfile.open(oZipfile.infolist()[0], 'r', MALWARE_PASSWORD)
-        oDataIO = DataIO(oZipContent.read())
-        oZipContent.close()
-        oZipfile.close()
+    if options.jsoninput:
+        data = CheckJSON(sys.stdin.read())
+        if data == None:
+            return
     else:
-        oDataIO = DataIO(open(filename, 'rb').read())
+        if filename == '':
+            IfWIN32SetBinary(sys.stdin)
+            if sys.version_info[0] >= 3:
+                oDataIO = DataIO(sys.stdin.buffer.read())
+            else:
+                oDataIO = DataIO(sys.stdin.read())
+        elif filename.lower().endswith('.zip'):
+            oZipfile = zipfile.ZipFile(filename, 'r')
+            oZipContent = oZipfile.open(oZipfile.infolist()[0], 'r', MALWARE_PASSWORD)
+            oDataIO = DataIO(oZipContent.read())
+            oZipContent.close()
+            oZipfile.close()
+        else:
+            oDataIO = DataIO(open(filename, 'rb').read())
+        data = [{'id': None, 'name': None, 'content': oDataIO.read()}]
 
     if options.dump:
         DumpFunction = lambda x:x
@@ -1072,44 +1294,34 @@ def BASE64Dump(filename, options):
         jsonObject = []
 
     if options.encoding == 'all' or options.yara != None:
-        formatString = '%3s  %-7s %-16s %-16s %-32s'
-        columnNames = ('Enc', 'Size', 'Encoded', 'Decoded', '%s decoded' % CalculateChosenHash(b'')[1])
+        formatString = '%3s  %-7s %-3s %-16s %-16s %-32s %s'
+        columnNames = ('Enc', 'Size', 'Chars', 'Encoded', 'Decoded', '%s decoded' % CalculateChosenHash(b'')[1], 'Item')
         print(formatString % columnNames)
         print(formatString % tuple(['-' * len(s) for s in columnNames]))
     elif options.select == '' and not options.jsonoutput:
-        formatString = '%-2s  %-7s %-16s %-16s %-32s'
-        columnNames = ('ID', 'Size', 'Encoded', 'Decoded', '%s decoded' % CalculateChosenHash(b'')[1])
+        formatString = '%-2s  %-7s %-16s %-16s %-32s %s'
+        columnNames = ('ID', 'Size', 'Encoded', 'Decoded', '%s decoded' % CalculateChosenHash(b'')[1], 'Item')
         print(formatString % columnNames)
         print(formatString % tuple(['-' * len(s) for s in columnNames]))
 
-    data = oDataIO.read()
     if options.ignorewhitespace:
         data = RemoveWhitespace(data)
-    for ignore in options.ignore:
-        data = data.replace(bytes([P23Ord(ignore)]), b'')
     for index in range(len(options.ignore)):
-        data = data.replace(options.ignore.encode()[index:index + 1], b'')
+        data = DataReplace(data, options.ignore.encode()[index:index + 1], b'')
     bytesignorehex = binascii.a2b_hex(options.ignorehex)
     for index in range(len(bytesignorehex)):
-        data = data.replace(bytesignorehex[index:index + 1], b'')
+        data = DataReplace(data, bytesignorehex[index:index + 1], b'')
     if options.ignorenullbytes:
-        previous_char_was_zero = False
-        result = ''
-        for char in data:
-            if char == '\x00':
-                if previous_char_was_zero:
-                    result += char
-                previous_char_was_zero = True
-            else:
-                result += char
-                previous_char_was_zero = False
-        data = result
-        result = None
+        data = IgnoreLeadingNULLBytes(data)
     dDecodedData = {}
 
-    ProcessFunction = lambda x: x
-    if options.process != '':
-        ProcessFunction = eval(options.process)
+    PreProcessFunction = lambda x: x
+    if options.preprocess != '':
+        PreProcessFunction = eval(options.preprocess)
+
+    PostProcessFunction = lambda x: x
+    if options.postprocess != '':
+        PostProcessFunction = eval(options.postprocess)
 
     rules = None
     if options.yara != None:
@@ -1120,13 +1332,13 @@ def BASE64Dump(filename, options):
         if options.verbose:
             print(rulesVerbose)
         for encoding in dEncodings:
-            for encodeddata, decodeddata in dEncodings[encoding][1](data, ProcessFunction):
+            for item, encodeddata, decodeddata in dEncodings[encoding][1](data, PreProcessFunction, PostProcessFunction):
                 if options.number and len(decodeddata) < options.number:
                     continue
                 if options.unique and decodeddata in dDecodedData:
                     continue
                 dDecodedData[decodeddata] = True
-                line = '%3s: %7d %-16s %-16s %s' % (encoding, len(encodeddata), encodeddata[0:16].decode('latin'), AsciiDump(decodeddata[0:16]), CalculateChosenHash(decodeddata)[0])
+                line = '%3s: %7d %5d %-16s %-16s %s%s' % (encoding, len(encodeddata), CalculateFileMetaData(encodeddata)[5], encodeddata[0:16].decode('latin'), AsciiDump(decodeddata[0:16]), CalculateChosenHash(decodeddata)[0], PrefixIfNeeded(ProduceJSONName(item)))
                 oDecoders = [cIdentity(decodeddata, None)]
                 for cDecoder in decoders:
                     try:
@@ -1153,27 +1365,27 @@ def BASE64Dump(filename, options):
     elif options.encoding == 'all':
         report = []
         for encoding in dEncodings:
-            for encodeddata, decodeddata in dEncodings[encoding][1](data, ProcessFunction):
+            for item, encodeddata, decodeddata in dEncodings[encoding][1](data, PreProcessFunction, PostProcessFunction):
                 if options.number and len(decodeddata) < options.number:
                     continue
                 if options.unique and decodeddata in dDecodedData:
                     continue
                 dDecodedData[decodeddata] = True
-                report.append([len(encodeddata), '%3s: %7d %-16s %-16s %s' % (encoding, len(encodeddata), encodeddata[0:16].decode('latin'), AsciiDump(decodeddata[0:16]), CalculateChosenHash(decodeddata)[0])])
+                report.append([len(encodeddata), '%3s: %7d %5d %-16s %-16s %s%s' % (encoding, len(encodeddata), CalculateFileMetaData(encodeddata)[5], encodeddata[0:16].decode('latin'), AsciiDump(decodeddata[0:16]), CalculateChosenHash(decodeddata)[0], PrefixIfNeeded(ProduceJSONName(item)))])
         for key, value in sorted(report):
             print(value)
     else:
-        decodedData = list(dEncodings[options.encoding][1](data, ProcessFunction))
+        decodedData = list(dEncodings[options.encoding][1](data, PreProcessFunction, PostProcessFunction))
         if options.select == 'L':
             largestSize = -1
             largestCounter = None
-            for index, (encodeddata, decodeddata) in enumerate(decodedData):
+            for index, (item, encodeddata, decodeddata) in enumerate(decodedData):
                 if len(encodeddata) > largestSize:
                     largestSize = len(encodeddata)
                     largestCounter = index + 1
             options.select = str(largestCounter)
         counter = 1
-        for encodeddata, decodeddata in decodedData:
+        for item, encodeddata, decodeddata in decodedData:
             if options.number and len(decodeddata) < options.number:
                 continue
             if options.unique and decodeddata in dDecodedData:
@@ -1183,7 +1395,7 @@ def BASE64Dump(filename, options):
                 if options.jsonoutput:
                     jsonObject.append({'id': counter, 'name': encodeddata[0:16].decode('latin'), 'content': binascii.b2a_base64(decodeddata).strip(b'\n').decode()})
                 else:
-                    print('%2d: %7d %-16s %-16s %s' % (counter, len(encodeddata), encodeddata[0:16].decode('latin'), AsciiDump(decodeddata[0:16]), CalculateChosenHash(decodeddata)[0]))
+                    print('%2d: %7d %-16s %-16s %s%s' % (counter, len(encodeddata), encodeddata[0:16].decode('latin'), AsciiDump(decodeddata[0:16]), CalculateChosenHash(decodeddata)[0], PrefixIfNeeded(ProduceJSONName(item))))
             elif ('%s' % counter) == options.select or options.select == 'a':
                 if len(decoders) > 1:
                     print('Error: provide only one decoder when using option select')
@@ -1193,7 +1405,7 @@ def BASE64Dump(filename, options):
                     jsonObject.append({'id': counter, 'name': encodeddata[0:16].decode('latin'), 'content': binascii.b2a_base64(decodeddata).strip(b'\n').decode()})
                 elif DumpFunction == None:
                     filehash, magicPrintable, magicHex, fileSize, entropy, countUniqueBytes, countNullByte, countControlBytes, countWhitespaceBytes, countPrintableBytes, countHighBytes = CalculateFileMetaData(CutData(decodeddata, options.cut)[0])
-                    print('Info:')
+                    print('Info decoded data:')
                     print(' %s: %s' % (CalculateChosenHash(b'')[1], filehash))
                     print(' %s: %d' % ('Filesize', fileSize))
                     print(' %s: %f' % ('Entropy', entropy))
@@ -1205,6 +1417,12 @@ def BASE64Dump(filename, options):
                     print(' %s: %s' % ('Whitespace bytes', countWhitespaceBytes))
                     print(' %s: %s' % ('Printable bytes', countPrintableBytes))
                     print(' %s: %s' % ('High bytes', countHighBytes))
+                    print('')
+                    print('Info encoded data:')
+                    filehash, magicPrintable, magicHex, fileSize, entropy, countUniqueBytes, countNullByte, countControlBytes, countWhitespaceBytes, countPrintableBytes, countHighBytes = CalculateFileMetaData(encodeddata)
+                    print(' %s: %d' % ('Filesize', fileSize))
+                    print(' %s: %f' % ('Entropy', entropy))
+                    print(' %s: %d' % ('Unique bytes', countUniqueBytes))
                 else:
                     StdoutWriteChunked(HeadTail(DumpFunction(DecodeFunction(decoders, options, CutData(decodeddata, options.cut)[0])), options.headtail))
             counter += 1
@@ -1232,6 +1450,7 @@ def Main():
         'zxcn': ('0x hexadecimal 1 or 2 digits, comma-separated, example: 0x90,0xA,0x2A,0x90...', DecodeDataZXCN),
         'dec': ('decimal numbers, separated by an arbitrary separator, example: 80;75;3;4...', DecodeDataDecimal),
         'nb': ('NETBIOS, uppercase letters from A to P, example: ENFKOIAA', DecodeDataNETBIOS),
+        'nbl': ('NETBIOS, lowercase letters from a to p, example: enfkoiaa', DecodeDataNETBIOSLowercase),
         'b85': ('BASE85 RFC 1924, example: X>D+Ca&#bLba`-Pb31o...', DecodeDataBase85RFC1924),
         'a85': ('ASCII85, example: BOu!rD]...', DecodeDataAscii85),
     }
@@ -1261,8 +1480,10 @@ def Main():
     oParser.add_option('--yarastrings', action='store_true', default=False, help='Print YARA strings')
     oParser.add_option('-V', '--verbose', action='store_true', default=False, help='verbose output with decoder errors and YARA rules')
     oParser.add_option('--jsonoutput', action='store_true', default=False, help='produce json output')
+    oParser.add_option('--jsoninput', action='store_true', default=False, help='consume json input')
     oParser.add_option('-T', '--headtail', action='store_true', default=False, help='do head & tail')
-    oParser.add_option('-p', '--process', type=str, default='', help='Python function to process encodings prior to decoding (like L4, lambda bytes: bytes[:-1], ...)')
+    oParser.add_option('-p', '--preprocess', type=str, default='', help='Python function to process encodings prior to decoding (like L4, lambda bytes: bytes[:-1], ...)')
+    oParser.add_option('-P', '--postprocess', type=str, default='', help='Python function to post-process decodings')
     (options, args) = oParser.parse_args()
 
     if options.man:
